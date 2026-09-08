@@ -505,6 +505,8 @@ async def shutdown_error(ctx, error):
 async def on_reaction_add(reaction, user):
     if user.bot: return
     message = reaction.message
+    if not bot.internal_game_message or message.id != bot.internal_game_message.id:
+        return
     if not message.embeds: return
     title = message.embeds[0].title
     if title and '내전 참가자 목록' in title:
@@ -516,6 +518,8 @@ async def on_reaction_add(reaction, user):
 async def on_reaction_remove(reaction, user):
     if user.bot: return
     message = reaction.message
+    if not bot.internal_game_message or message.id != bot.internal_game_message.id:
+        return
     if not message.embeds: return
     title = message.embeds[0].title
     if title and '내전 참가자 목록' in title:
