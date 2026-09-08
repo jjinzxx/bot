@@ -166,6 +166,10 @@ async def start_internal_game(ctx, date=None, time=None):
     if not date or not time:
         await ctx.send('날짜와 시간을 입력해주세요.\n사용법: !내전 2026-01-01 20:00', delete_after=5)
         return
+
+    bot.game.participants.clear()
+    bot.game.waiting_list.clear()
+    
     bot.game.set_datetime(date, time)
     role = discord.utils.get(ctx.guild.roles, name='member')
     if not role:
