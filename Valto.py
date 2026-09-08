@@ -1,5 +1,5 @@
 # =============================== #
-# == Last Update : 2026.04.11. == #
+# == Last Update : 2026.05.02. == #
 # =============================== #
 
 import discord
@@ -47,8 +47,8 @@ ALLOWED_CHANNELS = [
 ]
 
 # ========= 맵 리스트 =========
-allmaps = ["스플릿", "바인드", "헤이븐", "어센트", "아이스박스", "브리즈", "프랙처", "펄", "로터스", "선셋", "어비스", "코로드"] 
-maps = ["바인드", "브리즈", "스플릿", "펄", "헤이븐", "프랙처", "로터스"]
+allmaps = ["스플릿", "바인드", "헤이븐", "어센트", "아이스박스", "브리즈", "프랙처", "펄", "로터스", "선셋", "어비스", "코로드", "서밋"] 
+maps = ["서밋", "어비스", "스플릿", "선셋", "헤이븐", "어센트", "로터스"]
 
 map_images = {
      "스플릿" : "스플릿.png",
@@ -62,7 +62,8 @@ map_images = {
      "로터스" : "로터스.png",
      "선셋" : "선셋.png",
      "어비스" : "어비스.png",
-     "코로드" : "코로드.png"
+     "코로드" : "코로드.png",
+     "서밋" : "서밋.png"
 }
 
 # ===== 내전 관리 클래스 =====
@@ -139,6 +140,9 @@ async def help_command(ctx):
             '`!내전준비` 참여자 준비 안내\n'
             '`!내전마무리` 내전 종료 안내\n'
             '`!맵` 랜덤 맵 추첨\n'
+            '`!맵목록` 현재 추첨 가능한 맵 목록 확인\n' # 추가
+            '`!맵추가 [이름]` 추첨 목록에 맵 추가 (관리자)\n' # 추가
+            '`!맵삭제 [이름]` 추첨 목록에서 맵 제거 (관리자)\n' # 추가
             '※ 내전은 이모지 반응으로 참가/취소'
         ), inline=False)
     embed.add_field(
@@ -329,6 +333,92 @@ async def random_map(ctx):
         await ctx.send(file=file, embed=embed)
     else:
         await ctx.send(embed=embed)
+
+# ===== 맵 목록 보기 =====
+@bot.command(name='맵목록')
+async def list_maps(ctx):
+    if ctx.channel.id not in ALLOWED_CHANNELS:
+        return
+    try: await ctx.message.delete()
+    except: pass
+
+    if not maps:
+        await ctx.send("현재 추첨 가능한 맵이 없습니다.", delete_after=3)
+        return
+
+    # maps 리스트를 쉼표로 연결하여 표시
+    maps_text = ", ".join(maps)
+    embed = discord.Embed(
+        title="🗺 현재 추첨 가능 맵 목록",
+        description=f"```{maps_text}```",
+        color=0x1abc9c
+    )
+    await ctx.send(embed=embed, delete_after=10)
+
+
+# ===== 맵 추가 (관리자) =====
+@bot.command(name='맵추가')
+@commands.check(is_admin)
+async def add_map(ctx, map_name: str):
+    if ctx.channel.id not in ALLOWED_CHANNELS:
+        return
+    try: await ctx.message.delete()
+    except: pass
+
+    global maps
+    
+    # 전체 맵 리스트(allmaps)에 존재하는 맵인지 확인
+    if map_name not in allmaps:
+        await ctx.send(f"'{map_name}'은(는) 올바른 발로란트 맵 이름이 아닙니다. (전체 맵: {', '.join(allmaps)})", delete_after=5)
+        return
+
+    # 이미 추첨 리스트에 있는지 확인
+    if map_name in maps:
+        await ctx.send(f"'{map_name}'은(는) 이미 추첨 목록에 존재합니다.", delete_after=3)
+        return
+
+    maps.append(map_name)
+    logger.info(f"[맵 추가] 관리자가 추첨 목록에 {map_name}을(를) 추가했습니다.")
+    await ctx.send(f"추첨 목록에 **{map_name}**이(가) 추가되었습니다.", delete_after=3)
+
+@add_map.error
+async def add_map_error(ctx, error):
+    try: await ctx.message.delete()
+    except: pass
+    if isinstance(error, commands.CheckFailure):
+        await ctx.send("이 명령어는 관리자만 사용할 수 있습니다.", delete_after=3)
+    elif isinstance(error, commands.MissingRequiredArgument):
+        await ctx.send("추가할 맵 이름을 입력해주세요. 사용법: !맵추가 [이름]", delete_after=3)
+
+
+# ===== 맵 삭제 (관리자) =====
+@bot.command(name='맵삭제')
+@commands.check(is_admin)
+async def remove_map(ctx, map_name: str):
+    if ctx.channel.id not in ALLOWED_CHANNELS:
+        return
+    try: await ctx.message.delete()
+    except: pass
+
+    global maps
+
+    # 추첨 리스트에 존재하는지 확인
+    if map_name not in maps:
+        await ctx.send(f"'{map_name}'은(는) 현재 추첨 목록에 없습니다.", delete_after=3)
+        return
+
+    maps.remove(map_name)
+    logger.info(f"[맵 삭제] 관리자가 추첨 목록에서 {map_name}을(를) 삭제했습니다.")
+    await ctx.send(f"추첨 목록에서 **{map_name}**이(가) 삭제되었습니다.", delete_after=3)
+
+@remove_map.error
+async def remove_map_error(ctx, error):
+    try: await ctx.message.delete()
+    except: pass
+    if isinstance(error, commands.CheckFailure):
+        await ctx.send("이 명령어는 관리자만 사용할 수 있습니다.", delete_after=3)
+    elif isinstance(error, commands.MissingRequiredArgument):
+        await ctx.send("삭제할 맵 이름을 입력해주세요. 사용법: !맵삭제 [이름]", delete_after=3)
         
 # ===== 내전 준비 =====
 @bot.command(name='내전준비')
